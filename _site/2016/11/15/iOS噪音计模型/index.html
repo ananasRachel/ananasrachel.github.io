@@ -1,0 +1,451 @@
+--- layout: default ---
+
+<!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/post-bg-ios9-web.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header {
+        position: relative;
+        background-image: url('/img/post-bg-ios9-web.jpg')
+    }
+
+    {
+        % if page.header-mask %
+    }
+
+    header.intro-header .header-mask {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        background: rgba(0,
+        0,
+        0,
+        {
+            {
+                page.header-mask
+            }
+        }
+        );
+    }
+
+    {
+        % endif %
+    }
+</style>
+<header class="intro-header">
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#iOS" title="iOS">iOS</a> 
+                        <a class="tag" href="/tags/#Demo" title="Demo">Demo</a> 
+                    </div>
+                    <h1>iOS噪音计</h1>
+                     
+                    <h2 class="subheading">一个iOS噪音计模型、以及测量原理及分贝计算</h2>
+                    
+                    <span class="meta">Posted by BY on November 15, 2016</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+            <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+                <h1 id="前言">前言</h1>
+
+<p>最近在办公室觉得有点吵，然后忽然想做一个噪音计测试一下噪音，在App Store下载了几款测噪音软件，使用原来都大同小异。于是决定自己实现测噪音的原理。</p>
+
+<h2 id="分贝db">分贝dB</h2>
+<p>首先要测量噪音，必须知道噪音的大小的参考的单位为分贝（dB），分贝的定义如下：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>SPL = 20lg[p(e)/p(ref)]
+</code></pre></div></div>
+<p><code class="highlighter-rouge">p(e)</code>为待测的有效声压，<code class="highlighter-rouge">p(ref)</code>为参考声压，一般取2*10E-5帕，这是人耳能分辨的最小声压（1KHz）。</p>
+
+<p>就是说噪音每增加20dB，声压增强了10倍。</p>
+
+<h2 id="ios测噪音原理">iOS测噪音原理</h2>
+
+<p>iOS设备测量噪音原理非常简单：调用系统麦克风，根据麦克风输入强度计算转化为对应的dB值。但是，实现的过程可是坑满满。</p>
+
+<p>找到了一篇博客介绍iOS硬件的调用:<a href="http://www.cnblogs.com/kenshincui/p/4186022.html">iOS开发系列–音频播放、录音、视频播放、拍照、视频录制</a></p>
+
+<p>iOS的<code class="highlighter-rouge">AVFoundation</code>框架中有一个<code class="highlighter-rouge">AVAudioRecorder</code>类专门处理录音操作，详见<a href="https://developer.apple.com/reference/avfoundation/1668872-av_foundation_audio_settings_con">Apple文档</a></p>
+
+<p>在<code class="highlighter-rouge">AVAudioRecorder.h</code>中找到下列方法</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>- (void)updateMeters; /* call to refresh meter values */ 更新麦克风测量值
+- (float)peakPowerForChannel:(NSUInteger)channelNumber; /* returns peak power in decibels for a given channel */ 获取峰值
+- (float)averagePowerForChannel:(NSUInteger)channelNumber; /* returns average power in decibels for a given channel */ 获取平局值
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">- (float)averagePowerForChannel:(NSUInteger)channelNumber;</code>文档中描述：</p>
+
+<blockquote>
+  <p>Return Value</p>
+</blockquote>
+
+<blockquote>
+  <p>The current average power, in decibels, for the sound being recorded. A return value of 0 dB indicates full scale, or maximum power; a return value of -160 dB indicates minimum power (that is, near silence).</p>
+</blockquote>
+
+<blockquote>
+  <p>If the signal provided to the audio recorder exceeds ±full scale, then the return value may exceed 0 (that is, it may enter the positive range).</p>
+</blockquote>
+
+<blockquote>
+  <p>Discussion</p>
+</blockquote>
+
+<blockquote>
+  <p>To obtain a current average power value, you must call the updateMeters method before calling this method.</p>
+</blockquote>
+
+<p>也就是说获取的麦克风测量值返回值范围为 <code class="highlighter-rouge">-160dB ~ 0dB</code>,并且注意最后那句话返回值可能超过0。</p>
+
+<h2 id="转化公式">转化公式</h2>
+
+<p>获取的的测量值为 <code class="highlighter-rouge">-160 ~ 0dB</code> ，如何转化为我们所要的噪音值呢？在网上找了很多资料都没有结果，于是就自己摸索转化公式。</p>
+
+<p>刚开始想到的是利用分贝计算公式<code class="highlighter-rouge">SPL = 20lg[p(e)/p(ref)]</code>进行计算，后来直接放弃这个方案，因为这是一个对数运算，获取到的值非常稳定，几乎不会波动，与其他的测噪软件所得的分贝值出入太大。</p>
+
+<p>然后发现有个App在麦克风没有输入时显示-55dB</p>
+
+<p><img src="http://ww2.sinaimg.cn/large/7853084cgw1f9u0nu3xv3j205n0a0glq.jpg" alt="" /></p>
+
+<p>于是思路就有了。</p>
+
+<p>其他测噪音软件的量程均为<code class="highlighter-rouge">0~110dB</code>,而我们获取的的测量值为 <code class="highlighter-rouge">-160 ~ 0dB</code>，两者之间差了<code class="highlighter-rouge">50dB</code>，也就是说以麦克风的测量值的<code class="highlighter-rouge">-160dB+50dB = -110dB</code>作为起点，<code class="highlighter-rouge">0dB</code>作为Max值,恰好量程为<code class="highlighter-rouge">0~110dB</code>.</p>
+
+<p>问题看似结束，但是直接以<code class="highlighter-rouge">50dB</code>作为补偿测量结果会偏大。最后选择了分段进行处理，代码如下</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+-(void)audioPowerChange{
+    
+    [self.audioRecorder updateMeters];//更新测量值
+    float power = [self.audioRecorder averagePowerForChannel:0];// 均值
+    float powerMax = [self.audioRecorder peakPowerForChannel:0];// 峰值
+    NSLog(@"power = %f, powerMax = %f",power, powerMax);
+    
+    CGFloat progress = (1.0 / 160.0) * (power + 160.0);
+    
+    // 关键代码
+    power = power + 160  - 50;
+    
+    int dB = 0;
+    if (power &lt; 0.f) {
+        dB = 0;
+    } else if (power &lt; 40.f) {
+        dB = (int)(power * 0.875);
+    } else if (power &lt; 100.f) {
+        dB = (int)(power - 15);
+    } else if (power &lt; 110.f) {
+        dB = (int)(power * 2.5 - 165);
+    } else {
+        dB = 110;
+    }
+    
+    NSLog(@"progress = %f, dB = %d", progress, dB);
+    self.powerLabel.text = [NSString stringWithFormat:@"%ddB", dB];
+    [self.audioPowerProgress setProgress:progress];
+
+}
+
+</code></pre></div></div>
+
+<h1 id="效果">效果</h1>
+
+<p>效果如下：</p>
+
+<p><img src="http://ww4.sinaimg.cn/large/7853084cgw1f9u1gqgqieg20k00zk7d8.gif" alt="" /></p>
+
+<h1 id="下载地址">下载地址</h1>
+
+<p>Demo下载地址：<a href="https://github.com/qiubaiying/Noise-meter-Demo">Noise-meter-Demo</a></p>
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/2016/10/26/JSON-%E8%BD%AC%E6%A8%A1%E5%9E%8B-For-YYModel/" data-toggle="tooltip" data-placement="top"
+                            title="JSON转模型 For YYModel">
+                        Previous<br>
+                        <span>JSON转模型 For YYModel</span>
+                        </a>
+                    </li>
+                     
+                    <li class="next">
+                        <a href="/2016/11/28/Objective-C-RunLoop/" data-toggle="tooltip" data-placement="top" title="Objective-C：RunLoop">
+                        Next<br>
+                        <span>Objective-C：RunLoop</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+
+
+                <!--Gitalk评论start  -->
+                
+                <!-- 引入Gitalk评论插件  -->
+                <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+                <script src="https://unpkg.com/gitalk@latest/dist/gitalk.min.js"></script>
+                <div id="gitalk-container"></div>
+                <script type="text/javascript">
+                    var gitalk = new Gitalk({
+                        clientID: 'f2c84e7629bb1446c1a4',
+                        clientSecret: 'ca6d6139d1e1b8c43f8b2e19492ddcac8b322d0d',
+                        repo: 'qiubaiying.github.io',
+                        owner: 'qiubaiying',
+                        admin: ['qiubaiying'],
+                        distractionFreeMode: true,
+                    id: window.location.pathname,
+                    });
+                    gitalk.render('gitalk-container');
+                </script>
+                
+                <!-- Gitalk end -->
+
+                
+
+            </div>
+
+            <!-- Side Catalog Container -->
+            
+            <div class="
+                col-lg-2 col-lg-offset-0
+                visible-lg-block
+                sidebar-container
+                catalog-container">
+                <div class="side-catalog">
+                    <hr class="hidden-sm hidden-xs">
+                    <h5>
+                        <a class="catalog-toggle" href="#">CATALOG</a>
+                    </h5>
+                    <ul class="catalog-body"></ul>
+                </div>
+            </div>
+            
+
+            <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+                         
+                        <a href="/tags/#iOS" title="iOS" rel="31">
+                                    iOS
+                                </a>   
+                        <a href="/tags/#iOS开发基础" title="iOS开发基础" rel="1">
+                                    iOS开发基础
+                                </a>   
+                        <a href="/tags/#开发技巧" title="开发技巧" rel="7">
+                                    开发技巧
+                                </a>   
+                        <a href="/tags/#Debug" title="Debug" rel="2">
+                                    Debug
+                                </a>   
+                        <a href="/tags/#Demo" title="Demo" rel="1">
+                                    Demo
+                                </a>   
+                        <a href="/tags/#RunLoop" title="RunLoop" rel="1">
+                                    RunLoop
+                                </a>   
+                        <a href="/tags/#Obj-C" title="Obj-C" rel="3">
+                                    Obj-C
+                                </a>   
+                        <a href="/tags/#Xcode" title="Xcode" rel="9">
+                                    Xcode
+                                </a>   
+                        <a href="/tags/#定时器" title="定时器" rel="1">
+                                    定时器
+                                </a>   
+                        <a href="/tags/#Category" title="Category" rel="1">
+                                    Category
+                                </a>   
+                        <a href="/tags/#ObjC" title="ObjC" rel="1">
+                                    ObjC
+                                </a>   
+                        <a href="/tags/#ReactiveCocoa" title="ReactiveCocoa" rel="2">
+                                    ReactiveCocoa
+                                </a>   
+                        <a href="/tags/#函数式编程" title="函数式编程" rel="2">
+                                    函数式编程
+                                </a>   
+                        <a href="/tags/#开源框架" title="开源框架" rel="2">
+                                    开源框架
+                                </a>   
+                        <a href="/tags/#轮子" title="轮子" rel="1">
+                                    轮子
+                                </a>   
+                        <a href="/tags/#Runtime" title="Runtime" rel="2">
+                                    Runtime
+                                </a>   
+                        <a href="/tags/#生活" title="生活" rel="5">
+                                    生活
+                                </a>   
+                        <a href="/tags/#Blog" title="Blog" rel="2">
+                                    Blog
+                                </a>   
+                        <a href="/tags/#Mac" title="Mac" rel="8">
+                                    Mac
+                                </a>   
+                        <a href="/tags/#效率" title="效率" rel="3">
+                                    效率
+                                </a>   
+                        <a href="/tags/#博客" title="博客" rel="1">
+                                    博客
+                                </a>   
+                        <a href="/tags/#漫谈" title="漫谈" rel="1">
+                                    漫谈
+                                </a>   
+                        <a href="/tags/#终端" title="终端" rel="7">
+                                    终端
+                                </a>   
+                        <a href="/tags/#Git" title="Git" rel="5">
+                                    Git
+                                </a>   
+                        <a href="/tags/#Github" title="Github" rel="1">
+                                    Github
+                                </a>   
+                        <a href="/tags/#macOS" title="macOS" rel="1">
+                                    macOS
+                                </a>   
+                        <a href="/tags/#Swift" title="Swift" rel="9">
+                                    Swift
+                                </a>   
+                        <a href="/tags/#设计模式" title="设计模式" rel="1">
+                                    设计模式
+                                </a>   
+                        <a href="/tags/#CocoaPods" title="CocoaPods" rel="2">
+                                    CocoaPods
+                                </a>   
+                        <a href="/tags/#zsh" title="zsh" rel="2">
+                                    zsh
+                                </a>   
+                        <a href="/tags/#Objective-C" title="Objective-C" rel="1">
+                                    Objective-C
+                                </a>   
+                        <a href="/tags/#AsyncDisplayKit" title="AsyncDisplayKit" rel="1">
+                                    AsyncDisplayKit
+                                </a>   
+                        <a href="/tags/#开源库" title="开源库" rel="2">
+                                    开源库
+                                </a>   
+                        <a href="/tags/#Cocopods" title="Cocopods" rel="1">
+                                    Cocopods
+                                </a>   
+                        <a href="/tags/#ruby" title="ruby" rel="3">
+                                    ruby
+                                </a>   
+                        <a href="/tags/#shell" title="shell" rel="2">
+                                    shell
+                                </a>   
+                        <a href="/tags/#RVM" title="RVM" rel="1">
+                                    RVM
+                                </a>   
+                        <a href="/tags/#Swift语法" title="Swift语法" rel="1">
+                                    Swift语法
+                                </a>   
+                        <a href="/tags/#IBInspectable" title="IBInspectable" rel="1">
+                                    IBInspectable
+                                </a>   
+                        <a href="/tags/#Notes" title="Notes" rel="1">
+                                    Notes
+                                </a>   
+                        <a href="/tags/#健身" title="健身" rel="3">
+                                    健身
+                                </a>   
+                        <a href="/tags/#GCD" title="GCD" rel="1">
+                                    GCD
+                                </a>   
+                        <a href="/tags/#BJJ" title="BJJ" rel="1">
+                                    BJJ
+                                </a>  
+                    </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                    <li><a href="http://zhengwuyang.com">WY</a></li>
+                    
+                    <li><a href="http://www.jianshu.com/u/e71990ada2fd">简书·BY</a></li>
+                    
+                    <li><a href="https://apple.com">Apple</a></li>
+                    
+                    <li><a href="https://developer.apple.com/">Apple Developer</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+ 
+<!-- async load function -->
+<script>
+                    function async(u, c) {
+                        var d = document, t = 'script',
+                            o = d.createElement(t),
+                            s = d.getElementsByTagName(t)[0];
+                        o.src = u;
+                        if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+                        s.parentNode.insertBefore(o, s);
+                    }
+
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js", function () {
+        anchors.options = {
+            visible: 'always',
+            placement: 'right',
+            icon: '#'
+        };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+
+</script>
+<style>
+    /* place left on bigger screen */
+
+    @media all and (min-width: 800px) {
+        .anchorjs-link {
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top: -0.1em;
+        }
+    }
+</style>

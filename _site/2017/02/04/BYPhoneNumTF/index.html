@@ -1,0 +1,720 @@
+--- layout: default ---
+
+<!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/post-bg-ios9-web.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header {
+        position: relative;
+        background-image: url('/img/post-bg-ios9-web.jpg')
+    }
+
+    {
+        % if page.header-mask %
+    }
+
+    header.intro-header .header-mask {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        background: rgba(0,
+        0,
+        0,
+        {
+            {
+                page.header-mask
+            }
+        }
+        );
+    }
+
+    {
+        % endif %
+    }
+</style>
+<header class="intro-header">
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#iOS" title="iOS">iOS</a> 
+                        <a class="tag" href="/tags/#轮子" title="轮子">轮子</a> 
+                    </div>
+                    <h1>BYPhoneNumTF</h1>
+                     
+                    <h2 class="subheading">一个电话号码格式的文本框</h2>
+                    
+                    <span class="meta">Posted by BY on February 4, 2017</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+            <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+                <blockquote>
+  <p><strong>BYPhoneNumTF</strong> 一个电话号码格式的文本框</p>
+</blockquote>
+
+<h1 id="功能">功能</h1>
+
+<p>当在<code class="highlighter-rouge">TextField</code>输入数字时，会自动分隔为：137 9922 2299 或 137-9922-2299</p>
+
+<p>限制文本输入个数</p>
+
+<p>限制只能输入数字</p>
+<h1 id="效果">效果：</h1>
+
+<p><img src="http://ww2.sinaimg.cn/large/7853084cgw1fa3cqnu8s2g207i0dc4qp.gif" alt="" /></p>
+
+<h1 id="实现方法">实现方法</h1>
+
+<p>要实现电话号码格式的输入看似简单，但是实现起来坑非常多，至于坑是什么只有各位动手写了才能体会~</p>
+
+<p>下面我们来实现该功能：</p>
+
+<p>首先要遵守协议<code class="highlighter-rouge">&lt;UITextFieldDelegate&gt;</code></p>
+
+<p>然后在<code class="highlighter-rouge">- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string</code> 方法中实现我们的逻辑</p>
+
+<p>代码：</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>#import "LoginVC.h"
+
+#define placeholder @" "
+
+@interface LoginVC () &lt;UITextFieldDelegate&gt;
+
+@property (weak, nonatomic) IBOutlet UITextField *phoneNumberTF;
+
+@end
+
+
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string {
+
+    NSString *phStr = placeholder;
+    unichar phChar = ' ';
+    if (phStr.length) {
+        phChar = [phStr characterAtIndex:0];
+    }
+    
+    
+    if (textField) {
+        NSString* text = textField.text;
+        //删除
+        if([string isEqualToString:@""]){
+            
+            //删除一位
+            if(range.length == 1){
+                //最后一位,遇到空格则多删除一次
+                if (range.location == text.length - 1 ) {
+                    if ([text characterAtIndex:text.length - 1] == phChar) {
+                        [textField deleteBackward];
+                    }
+                    return YES;
+                }
+                //从中间删除
+                else{
+                    NSInteger offset = range.location;
+                    
+                    if (range.location &lt; text.length &amp;&amp; [text characterAtIndex:range.location] == phChar &amp;&amp; [textField.selectedTextRange isEmpty]) {
+                        [textField deleteBackward];
+                        offset --;
+                    }
+                    [textField deleteBackward];
+                    textField.text = [self _parseString:textField.text];
+                    UITextPosition *newPos = [textField positionFromPosition:textField.beginningOfDocument offset:offset];
+                    textField.selectedTextRange = [textField textRangeFromPosition:newPos toPosition:newPos];
+                    return NO;
+                }
+            }
+            else if (range.length &gt; 1) {
+                BOOL isLast = NO;
+                //如果是从最后一位开始
+                if(range.location + range.length == textField.text.length ){
+                    isLast = YES;
+                }
+                [textField deleteBackward];
+                textField.text = [self _parseString:textField.text];
+                
+                NSInteger offset = range.location;
+                if (range.location == 3 || range.location  == 8) {
+                    offset ++;
+                }
+                if (isLast) {
+                    //光标直接在最后一位了
+                }else{
+                    UITextPosition *newPos = [textField positionFromPosition:textField.beginningOfDocument offset:offset];
+                    textField.selectedTextRange = [textField textRangeFromPosition:newPos toPosition:newPos];
+                }
+                
+                return NO;
+            }
+            
+            else{
+                return YES;
+            }
+        }
+        
+        else if(string.length &gt;0){
+            
+            //限制输入字符个数
+            if (([self _noneSpaseString:textField.text].length + string.length - range.length &gt; 11) ) {
+                return NO;
+            }
+            
+            //判断是否是纯数字(搜狗，百度输入法，数字键盘居然可以输入其他字符)
+            if(![self _isNum:string]){
+                return NO;
+            }
+            [textField insertText:string];
+            textField.text = [self _parseString:textField.text];
+            
+            NSInteger offset = range.location + string.length;
+            if (range.location == 3 || range.location  == 8) {
+                offset ++;
+            }
+            UITextPosition *newPos = [textField positionFromPosition:textField.beginningOfDocument offset:offset];
+            textField.selectedTextRange = [textField textRangeFromPosition:newPos toPosition:newPos];
+            return NO;
+        }else{
+            return YES;
+        }
+        
+    }
+    
+    return YES;
+    
+
+}
+
+- (NSString*)_parseString:(NSString*)string{
+    
+    if (!string) {
+        return nil;
+    }
+    NSMutableString* mStr = [NSMutableString stringWithString:[string stringByReplacingOccurrencesOfString:placeholder withString:@""]];
+    if (mStr.length &gt;3) {
+        [mStr insertString:placeholder atIndex:3];
+    }if (mStr.length &gt; 8) {
+        [mStr insertString:placeholder atIndex:8];
+        
+    }
+    
+    return  mStr;
+    
+}
+
+/** 获取正常电话号码（去掉空格） */
+- (NSString*)_noneSpaseString:(NSString*)string{
+    
+    return [string stringByReplacingOccurrencesOfString:placeholder withString:@""];
+    
+}
+
+- (BOOL)_isNum:(NSString *)checkedNumString {
+    
+    if (!checkedNumString) {
+        return NO;
+    }
+    
+    checkedNumString = [checkedNumString stringByTrimmingCharactersInSet:[NSCharacterSet decimalDigitCharacterSet]];
+    
+    if(checkedNumString.length &gt; 0) {
+        return NO;
+    }
+    
+    return YES;
+    
+}
+
+</code></pre></div></div>
+
+<p>###封装方法</p>
+
+<p>需要实现的代码就是要这么多，但这些代码写在ViewController显得太臃肿了，所以我对代码进行了封装:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//
+//  BYPhoneNumTF.h
+//
+//  Created by BY on 16/12/2.
+//  Copyright © 2016年 BY. All rights reserved.
+//  电话号码类型的文本输入框，且只能输入数字
+//  输入显示：137 9922 1234 或 137-9922-1234
+//  使用方法：在XIB中的TextField继承该类即可
+//  修改占位符placeholder即可改变样式
+
+#import &lt;UIKit/UIKit.h&gt;
+
+// @" " or @"-"
+#define placeholder @" "
+
+@interface BYPhoneNumTF : UITextField
+
+/** 去掉格式的电话号码 */
+@property (nonatomic, strong) NSString *plainPhoneNum;
+
+@end
+</code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//
+//  BYPhoneNumTF.m
+//  dev-Jack
+//
+//  Created by BY on 16/12/2.
+//  Copyright © 2016年 Jack. All rights reserved.
+//
+
+#import "BYPhoneNumTF.h"
+
+
+@interface BYPhoneNumTF ()&lt;UITextFieldDelegate&gt;
+
+@end
+
+@implementation BYPhoneNumTF
+
+- (NSString *)plainPhoneNum {
+    return [self _noneSpaseString:self.text];
+}
+
+- (void)awakeFromNib {
+    [super awakeFromNib];
+    self.delegate = self;
+}
+
+
+- (BOOL)textField:(UITextField *)textField shouldChangeCharactersInRange:(NSRange)range replacementString:(NSString *)string {
+
+    NSString *phStr = placeholder;
+    unichar phChar = ' ';
+    if (phStr.length) {
+        phChar = [phStr characterAtIndex:0];
+    }
+    
+    
+    if (textField) {
+        NSString* text = textField.text;
+        //删除
+        if([string isEqualToString:@""]){
+            
+            //删除一位
+            if(range.length == 1){
+                //最后一位,遇到空格则多删除一次
+                if (range.location == text.length - 1 ) {
+                    if ([text characterAtIndex:text.length - 1] == phChar) {
+                        [textField deleteBackward];
+                    }
+                    return YES;
+                }
+                //从中间删除
+                else{
+                    NSInteger offset = range.location;
+                    
+                    if (range.location &lt; text.length &amp;&amp; [text characterAtIndex:range.location] == phChar &amp;&amp; [textField.selectedTextRange isEmpty]) {
+                        [textField deleteBackward];
+                        offset --;
+                    }
+                    [textField deleteBackward];
+                    textField.text = [self _parseString:textField.text];
+                    UITextPosition *newPos = [textField positionFromPosition:textField.beginningOfDocument offset:offset];
+                    textField.selectedTextRange = [textField textRangeFromPosition:newPos toPosition:newPos];
+                    return NO;
+                }
+            }
+            else if (range.length &gt; 1) {
+                BOOL isLast = NO;
+                //如果是从最后一位开始
+                if(range.location + range.length == textField.text.length ){
+                    isLast = YES;
+                }
+                [textField deleteBackward];
+                textField.text = [self _parseString:textField.text];
+                
+                NSInteger offset = range.location;
+                if (range.location == 3 || range.location  == 8) {
+                    offset ++;
+                }
+                if (isLast) {
+                    //光标直接在最后一位了
+                }else{
+                    UITextPosition *newPos = [textField positionFromPosition:textField.beginningOfDocument offset:offset];
+                    textField.selectedTextRange = [textField textRangeFromPosition:newPos toPosition:newPos];
+                }
+                
+                return NO;
+            }
+            
+            else{
+                return YES;
+            }
+        }
+        
+        else if(string.length &gt;0){
+            
+            //限制输入字符个数
+            if (([self _noneSpaseString:textField.text].length + string.length - range.length &gt; 11) ) {
+                return NO;
+            }
+            
+            //判断是否是纯数字(搜狗，百度输入法，数字键盘居然可以输入其他字符)
+            if(![self _isNum:string]){
+                return NO;
+            }
+            [textField insertText:string];
+            textField.text = [self _parseString:textField.text];
+            
+            NSInteger offset = range.location + string.length;
+            if (range.location == 3 || range.location  == 8) {
+                offset ++;
+            }
+            UITextPosition *newPos = [textField positionFromPosition:textField.beginningOfDocument offset:offset];
+            textField.selectedTextRange = [textField textRangeFromPosition:newPos toPosition:newPos];
+            return NO;
+        }else{
+            return YES;
+        }
+        
+    }
+    
+    return YES;
+    
+
+}
+
+- (NSString*)_parseString:(NSString*)string{
+    
+    if (!string) {
+        return nil;
+    }
+    NSMutableString* mStr = [NSMutableString stringWithString:[string stringByReplacingOccurrencesOfString:placeholder withString:@""]];
+    if (mStr.length &gt;3) {
+        [mStr insertString:placeholder atIndex:3];
+    }if (mStr.length &gt; 8) {
+        [mStr insertString:placeholder atIndex:8];
+        
+    }
+    
+    return  mStr;
+    
+}
+
+/** 获取正常电话号码（去掉空格） */
+- (NSString*)_noneSpaseString:(NSString*)string{
+    
+    return [string stringByReplacingOccurrencesOfString:placeholder withString:@""];
+    
+}
+
+- (BOOL)_isNum:(NSString *)checkedNumString {
+    
+    if (!checkedNumString) {
+        return NO;
+    }
+    
+    checkedNumString = [checkedNumString stringByTrimmingCharactersInSet:[NSCharacterSet decimalDigitCharacterSet]];
+    
+    if(checkedNumString.length &gt; 0) {
+        return NO;
+    }
+    
+    return YES;
+    
+}
+
+
+@end
+
+</code></pre></div></div>
+
+<h1 id="使用方法">使用方法</h1>
+
+<p>在storyboard中的<code class="highlighter-rouge">TextField</code>控件的Calss类型选择该类<code class="highlighter-rouge">BYPhoneNumTF</code>即可。</p>
+
+<p>代码及Demo下载地址：<a href="https://github.com/qiubaiying/BYPhoneNumTF">BYPhoneNumTF</a></p>
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/2017/01/06/ReactiveCocoa-%E8%BF%9B%E9%98%B6/" data-toggle="tooltip" data-placement="top"
+                            title="ReactiveCocoa 进阶">
+                        Previous<br>
+                        <span>ReactiveCocoa 进阶</span>
+                        </a>
+                    </li>
+                     
+                    <li class="next">
+                        <a href="/2017/02/04/Objective-C-Runtime%E8%AF%A6%E8%A7%A3/" data-toggle="tooltip" data-placement="top" title="Objective-C Runtime 详解">
+                        Next<br>
+                        <span>Objective-C Runtime 详解</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+
+
+                <!--Gitalk评论start  -->
+                
+                <!-- 引入Gitalk评论插件  -->
+                <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+                <script src="https://unpkg.com/gitalk@latest/dist/gitalk.min.js"></script>
+                <div id="gitalk-container"></div>
+                <script type="text/javascript">
+                    var gitalk = new Gitalk({
+                        clientID: 'f2c84e7629bb1446c1a4',
+                        clientSecret: 'ca6d6139d1e1b8c43f8b2e19492ddcac8b322d0d',
+                        repo: 'qiubaiying.github.io',
+                        owner: 'qiubaiying',
+                        admin: ['qiubaiying'],
+                        distractionFreeMode: true,
+                    id: window.location.pathname,
+                    });
+                    gitalk.render('gitalk-container');
+                </script>
+                
+                <!-- Gitalk end -->
+
+                
+
+            </div>
+
+            <!-- Side Catalog Container -->
+            
+            <div class="
+                col-lg-2 col-lg-offset-0
+                visible-lg-block
+                sidebar-container
+                catalog-container">
+                <div class="side-catalog">
+                    <hr class="hidden-sm hidden-xs">
+                    <h5>
+                        <a class="catalog-toggle" href="#">CATALOG</a>
+                    </h5>
+                    <ul class="catalog-body"></ul>
+                </div>
+            </div>
+            
+
+            <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+                         
+                        <a href="/tags/#iOS" title="iOS" rel="31">
+                                    iOS
+                                </a>   
+                        <a href="/tags/#iOS开发基础" title="iOS开发基础" rel="1">
+                                    iOS开发基础
+                                </a>   
+                        <a href="/tags/#开发技巧" title="开发技巧" rel="7">
+                                    开发技巧
+                                </a>   
+                        <a href="/tags/#Debug" title="Debug" rel="2">
+                                    Debug
+                                </a>   
+                        <a href="/tags/#Demo" title="Demo" rel="1">
+                                    Demo
+                                </a>   
+                        <a href="/tags/#RunLoop" title="RunLoop" rel="1">
+                                    RunLoop
+                                </a>   
+                        <a href="/tags/#Obj-C" title="Obj-C" rel="3">
+                                    Obj-C
+                                </a>   
+                        <a href="/tags/#Xcode" title="Xcode" rel="9">
+                                    Xcode
+                                </a>   
+                        <a href="/tags/#定时器" title="定时器" rel="1">
+                                    定时器
+                                </a>   
+                        <a href="/tags/#Category" title="Category" rel="1">
+                                    Category
+                                </a>   
+                        <a href="/tags/#ObjC" title="ObjC" rel="1">
+                                    ObjC
+                                </a>   
+                        <a href="/tags/#ReactiveCocoa" title="ReactiveCocoa" rel="2">
+                                    ReactiveCocoa
+                                </a>   
+                        <a href="/tags/#函数式编程" title="函数式编程" rel="2">
+                                    函数式编程
+                                </a>   
+                        <a href="/tags/#开源框架" title="开源框架" rel="2">
+                                    开源框架
+                                </a>   
+                        <a href="/tags/#轮子" title="轮子" rel="1">
+                                    轮子
+                                </a>   
+                        <a href="/tags/#Runtime" title="Runtime" rel="2">
+                                    Runtime
+                                </a>   
+                        <a href="/tags/#生活" title="生活" rel="5">
+                                    生活
+                                </a>   
+                        <a href="/tags/#Blog" title="Blog" rel="2">
+                                    Blog
+                                </a>   
+                        <a href="/tags/#Mac" title="Mac" rel="8">
+                                    Mac
+                                </a>   
+                        <a href="/tags/#效率" title="效率" rel="3">
+                                    效率
+                                </a>   
+                        <a href="/tags/#博客" title="博客" rel="1">
+                                    博客
+                                </a>   
+                        <a href="/tags/#漫谈" title="漫谈" rel="1">
+                                    漫谈
+                                </a>   
+                        <a href="/tags/#终端" title="终端" rel="7">
+                                    终端
+                                </a>   
+                        <a href="/tags/#Git" title="Git" rel="5">
+                                    Git
+                                </a>   
+                        <a href="/tags/#Github" title="Github" rel="1">
+                                    Github
+                                </a>   
+                        <a href="/tags/#macOS" title="macOS" rel="1">
+                                    macOS
+                                </a>   
+                        <a href="/tags/#Swift" title="Swift" rel="9">
+                                    Swift
+                                </a>   
+                        <a href="/tags/#设计模式" title="设计模式" rel="1">
+                                    设计模式
+                                </a>   
+                        <a href="/tags/#CocoaPods" title="CocoaPods" rel="2">
+                                    CocoaPods
+                                </a>   
+                        <a href="/tags/#zsh" title="zsh" rel="2">
+                                    zsh
+                                </a>   
+                        <a href="/tags/#Objective-C" title="Objective-C" rel="1">
+                                    Objective-C
+                                </a>   
+                        <a href="/tags/#AsyncDisplayKit" title="AsyncDisplayKit" rel="1">
+                                    AsyncDisplayKit
+                                </a>   
+                        <a href="/tags/#开源库" title="开源库" rel="2">
+                                    开源库
+                                </a>   
+                        <a href="/tags/#Cocopods" title="Cocopods" rel="1">
+                                    Cocopods
+                                </a>   
+                        <a href="/tags/#ruby" title="ruby" rel="3">
+                                    ruby
+                                </a>   
+                        <a href="/tags/#shell" title="shell" rel="2">
+                                    shell
+                                </a>   
+                        <a href="/tags/#RVM" title="RVM" rel="1">
+                                    RVM
+                                </a>   
+                        <a href="/tags/#Swift语法" title="Swift语法" rel="1">
+                                    Swift语法
+                                </a>   
+                        <a href="/tags/#IBInspectable" title="IBInspectable" rel="1">
+                                    IBInspectable
+                                </a>   
+                        <a href="/tags/#Notes" title="Notes" rel="1">
+                                    Notes
+                                </a>   
+                        <a href="/tags/#健身" title="健身" rel="3">
+                                    健身
+                                </a>   
+                        <a href="/tags/#GCD" title="GCD" rel="1">
+                                    GCD
+                                </a>   
+                        <a href="/tags/#BJJ" title="BJJ" rel="1">
+                                    BJJ
+                                </a>  
+                    </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                    <li><a href="http://zhengwuyang.com">WY</a></li>
+                    
+                    <li><a href="http://www.jianshu.com/u/e71990ada2fd">简书·BY</a></li>
+                    
+                    <li><a href="https://apple.com">Apple</a></li>
+                    
+                    <li><a href="https://developer.apple.com/">Apple Developer</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+ 
+<!-- async load function -->
+<script>
+                    function async(u, c) {
+                        var d = document, t = 'script',
+                            o = d.createElement(t),
+                            s = d.getElementsByTagName(t)[0];
+                        o.src = u;
+                        if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+                        s.parentNode.insertBefore(o, s);
+                    }
+
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js", function () {
+        anchors.options = {
+            visible: 'always',
+            placement: 'right',
+            icon: '#'
+        };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+
+</script>
+<style>
+    /* place left on bigger screen */
+
+    @media all and (min-width: 800px) {
+        .anchorjs-link {
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top: -0.1em;
+        }
+    }
+</style>

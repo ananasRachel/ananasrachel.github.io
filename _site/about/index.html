@@ -1,0 +1,351 @@
+--- layout: default ---
+
+<!-- Page Header -->
+<header class="intro-header" style="background-image: url('/img/post-bg-rwd.jpg')">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 ">
+                <div class="site-heading">
+                    <h1>About</h1>
+                    <!--<hr class="small">-->
+                    <span class="subheading">Hey, this is BY.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Main Content -->
+<div class="container">
+    <div class="row">
+        
+
+        <!-- USE SIDEBAR -->
+        <!-- PostList Container -->
+        <div class="
+                col-lg-8 col-lg-offset-1
+                col-md-8 col-md-offset-1
+                col-sm-12
+                col-xs-12
+                postlist-container
+            ">
+            <!-- Language Selector -->
+<!-- <select class="sel-lang" onchange= "onLanChange(this.options[this.options.selectedIndex].value)">
+    <option value="0" selected> 中文 Chinese </option>
+    <option value="1"> 英文 English </option>
+</select> -->
+
+<!-- Chinese Version -->
+<div class="zh post-container">
+
+    <!--copied from markdown -->
+    <blockquote><p>冰冻三尺 非一日之寒<br>
+    积土成山 非斯须之作</p></blockquote>
+
+    <p>Hey，我是<strong>柏荧(BY)</strong>，一只iOS程序猿，现在厦门工作。</p>
+
+    <p>工作、学习之余，我还是一个健身爱好者，同时也非常喜欢拳击。</p>
+
+    <p>这是我的利用 <a href="https://pages.github.com/">GitHub Pages</a> 与 <a href="http://jekyll.com.cn/">Jekyll</a> 搭建的 个人博客。我在GitHub主页<a href="https://github.com/qiubaiying">👉GitHub·BY</a> 与 简书主页<a href="https://http://www.jianshu.com/u/e71990ada2fd">👉BY</a>。如果有什么问题，欢迎提出探讨~</p>
+
+    <p></p>
+    
+    <h5>Talks</h5>
+
+    <ul>
+        <li><a href="https://github.com">GitHub</a></li>
+        <li><a href="http://jekyll.com.cn/">jekyll</a></li>
+        <li><a href="http://huangxuan.me/">Hux</a></li> 
+        <li><a href="https://analytics.google.com/analytics">Google Analytics</a></li>
+    </ul>
+</div>
+
+<!-- English Version -->
+<!-- <div class="en post-container">
+    <blockquote><p>Yet another iOS Developer. <br>
+    Yet another Life-long Student.</p></blockquote>
+
+    <p>Hi, I am <strong>Baiying Qiu</strong>，you can call me <strong>BY</strong>. I am an iOS software engineer and currently working in Xiamen</p>
+
+    <p>This is my personal blog, through making Github Pages and Jekyll.My GitHub  👉 <a href="http://github.com/qiubaiying">Github·BY</a>.</p>
+    
+    <p>I am a sports enthusiast, I like fitness, running and boxing.</p>
+
+    <h5>Talks</h5>
+
+    <ul>
+    <li><a href="https://github.com">GitHub</a></li>
+    <li><a href="http://jekyll.com.cn/">jekyll</a></li>
+    <li><a href="https://pages.github.com/">GitHub Pages</a></li>
+    <li><a href="https://qiubaiying.github.io">BY</a></li>
+    </ul>
+</div> -->
+
+<!-- Handle Language Change -->
+<script type="text/javascript">
+    // get nodes
+    var $zh = document.querySelector(".zh");
+    var $en = document.querySelector(".en");
+    var $select = document.querySelector("select");
+
+    // bind hashchange event
+    window.addEventListener('hashchange', _render);
+
+    // handle render
+    function _render(){
+        var _hash = window.location.hash;
+        // en
+        if(_hash == "#en"){
+            $select.selectedIndex = 1;
+            $en.style.display = "block";
+            $zh.style.display = "none";
+        // zh by default
+        }else{
+            // not trigger onChange, otherwise cause a loop call.
+            $select.selectedIndex = 0;
+            $zh.style.display = "block";
+            $en.style.display = "none";
+        }
+    }
+
+    // handle select change
+    function onLanChange(index){
+        if(index == 0){
+            window.location.hash = "#zh"
+        }else{
+            window.location.hash = "#en"
+        }
+    }
+
+    // init
+    _render();
+</script>
+
+
+<!-- Gitalk 评论 start  -->
+
+<!-- Gitalk link  -->
+<link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+<script src="https://unpkg.com/gitalk@latest/dist/gitalk.min.js"></script>
+
+<div id="gitalk-container"></div>
+    <script type="text/javascript">
+    var gitalk = new Gitalk({
+    clientID: 'f2c84e7629bb1446c1a4',
+    clientSecret: 'ca6d6139d1e1b8c43f8b2e19492ddcac8b322d0d',
+    repo: 'qiubaiying.github.io',
+    owner: 'qiubaiying',
+    admin: ['qiubaiying'],
+    distractionFreeMode: true,
+    id: 'about',
+    });
+    gitalk.render('gitalk-container');
+</script>
+
+<!-- Gitalk end -->
+
+ <!-- disqus 评论框 start  -->
+
+
+
+        </div>
+        <!-- Sidebar Container -->
+        <div class="
+                col-lg-3 col-lg-offset-0
+                col-md-3 col-md-offset-0
+                col-sm-12
+                col-xs-12
+                sidebar-container
+            ">
+            <!-- Featured Tags -->
+            
+            <section>
+                <hr class="hidden-sm hidden-xs">
+                <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                <div class="tags">
+                     
+                    <a href="/tags/#iOS" title="iOS" rel="31">
+                                    iOS
+                                </a>   
+                    <a href="/tags/#iOS开发基础" title="iOS开发基础" rel="1">
+                                    iOS开发基础
+                                </a>   
+                    <a href="/tags/#开发技巧" title="开发技巧" rel="7">
+                                    开发技巧
+                                </a>   
+                    <a href="/tags/#Debug" title="Debug" rel="2">
+                                    Debug
+                                </a>   
+                    <a href="/tags/#Demo" title="Demo" rel="1">
+                                    Demo
+                                </a>   
+                    <a href="/tags/#RunLoop" title="RunLoop" rel="1">
+                                    RunLoop
+                                </a>   
+                    <a href="/tags/#Obj-C" title="Obj-C" rel="3">
+                                    Obj-C
+                                </a>   
+                    <a href="/tags/#Xcode" title="Xcode" rel="9">
+                                    Xcode
+                                </a>   
+                    <a href="/tags/#定时器" title="定时器" rel="1">
+                                    定时器
+                                </a>   
+                    <a href="/tags/#Category" title="Category" rel="1">
+                                    Category
+                                </a>   
+                    <a href="/tags/#ObjC" title="ObjC" rel="1">
+                                    ObjC
+                                </a>   
+                    <a href="/tags/#ReactiveCocoa" title="ReactiveCocoa" rel="2">
+                                    ReactiveCocoa
+                                </a>   
+                    <a href="/tags/#函数式编程" title="函数式编程" rel="2">
+                                    函数式编程
+                                </a>   
+                    <a href="/tags/#开源框架" title="开源框架" rel="2">
+                                    开源框架
+                                </a>   
+                    <a href="/tags/#轮子" title="轮子" rel="1">
+                                    轮子
+                                </a>   
+                    <a href="/tags/#Runtime" title="Runtime" rel="2">
+                                    Runtime
+                                </a>   
+                    <a href="/tags/#生活" title="生活" rel="5">
+                                    生活
+                                </a>   
+                    <a href="/tags/#Blog" title="Blog" rel="2">
+                                    Blog
+                                </a>   
+                    <a href="/tags/#Mac" title="Mac" rel="8">
+                                    Mac
+                                </a>   
+                    <a href="/tags/#效率" title="效率" rel="3">
+                                    效率
+                                </a>   
+                    <a href="/tags/#博客" title="博客" rel="1">
+                                    博客
+                                </a>   
+                    <a href="/tags/#漫谈" title="漫谈" rel="1">
+                                    漫谈
+                                </a>   
+                    <a href="/tags/#终端" title="终端" rel="7">
+                                    终端
+                                </a>   
+                    <a href="/tags/#Git" title="Git" rel="5">
+                                    Git
+                                </a>   
+                    <a href="/tags/#Github" title="Github" rel="1">
+                                    Github
+                                </a>   
+                    <a href="/tags/#macOS" title="macOS" rel="1">
+                                    macOS
+                                </a>   
+                    <a href="/tags/#Swift" title="Swift" rel="9">
+                                    Swift
+                                </a>   
+                    <a href="/tags/#设计模式" title="设计模式" rel="1">
+                                    设计模式
+                                </a>   
+                    <a href="/tags/#CocoaPods" title="CocoaPods" rel="2">
+                                    CocoaPods
+                                </a>   
+                    <a href="/tags/#zsh" title="zsh" rel="2">
+                                    zsh
+                                </a>   
+                    <a href="/tags/#Objective-C" title="Objective-C" rel="1">
+                                    Objective-C
+                                </a>   
+                    <a href="/tags/#AsyncDisplayKit" title="AsyncDisplayKit" rel="1">
+                                    AsyncDisplayKit
+                                </a>   
+                    <a href="/tags/#开源库" title="开源库" rel="2">
+                                    开源库
+                                </a>   
+                    <a href="/tags/#Cocopods" title="Cocopods" rel="1">
+                                    Cocopods
+                                </a>   
+                    <a href="/tags/#ruby" title="ruby" rel="3">
+                                    ruby
+                                </a>   
+                    <a href="/tags/#shell" title="shell" rel="2">
+                                    shell
+                                </a>   
+                    <a href="/tags/#RVM" title="RVM" rel="1">
+                                    RVM
+                                </a>   
+                    <a href="/tags/#Swift语法" title="Swift语法" rel="1">
+                                    Swift语法
+                                </a>   
+                    <a href="/tags/#IBInspectable" title="IBInspectable" rel="1">
+                                    IBInspectable
+                                </a>   
+                    <a href="/tags/#Notes" title="Notes" rel="1">
+                                    Notes
+                                </a>   
+                    <a href="/tags/#健身" title="健身" rel="3">
+                                    健身
+                                </a>   
+                    <a href="/tags/#GCD" title="GCD" rel="1">
+                                    GCD
+                                </a>   
+                    <a href="/tags/#BJJ" title="BJJ" rel="1">
+                                    BJJ
+                                </a>  
+                </div>
+            </section>
+            
+
+            <!-- Short About -->
+            <section class="visible-md visible-lg">
+                <hr>
+                <h5><a href="/about/">ABOUT ME</a></h5>
+                <div class="short-about">
+                    
+                    <a href="/about">
+                                <img src="/img/about-BY-gentle.jpg"/>
+                            </a>  
+                    <p>Goals determine what you going to be!</p>
+                    
+                    <!-- SNS Link -->
+                    <ul class="list-inline">
+                        
+                        <!-- add jianshu add target = "_blank" to <a> by BY -->
+                             
+                        <li>
+                            <a target="_blank" href="https://github.com/ananasrachel">
+                                    <span class="fa-stack fa-lg">
+                                        <i class="fa fa-circle fa-stack-2x"></i>
+                                        <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                                    </span>
+                                </a>
+                        </li>
+                        
+
+                    </ul>
+                    
+                    <p>✉️ 906939864@qq.com</p>
+                    
+                </div>
+            </section>
+            <!-- Friends Blog -->
+            
+            <hr>
+            <h5>FRIENDS</h5>
+            <ul class="list-inline">
+                
+                <li><a href="http://zhengwuyang.com">WY</a></li>
+                
+                <li><a href="http://www.jianshu.com/u/e71990ada2fd">简书·BY</a></li>
+                
+                <li><a href="https://apple.com">Apple</a></li>
+                
+                <li><a href="https://developer.apple.com/">Apple Developer</a></li>
+                
+            </ul>
+            
+        </div>
+        
+    </div>
+</div>

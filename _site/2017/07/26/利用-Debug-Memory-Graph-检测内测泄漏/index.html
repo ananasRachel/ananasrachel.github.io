@@ -1,0 +1,402 @@
+--- layout: default ---
+
+<!-- Image to hack wechat -->
+<!-- <img src="/img/icon_wechat.png" width="0" height="0"> -->
+<!-- <img src="/img/post-bg-hacker.jpg" width="0" height="0"> -->
+
+<!-- Post Header -->
+<style type="text/css">
+    header.intro-header {
+        position: relative;
+        background-image: url('/img/post-bg-hacker.jpg')
+    }
+
+    {
+        % if page.header-mask %
+    }
+
+    header.intro-header .header-mask {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        background: rgba(0,
+        0,
+        0,
+        {
+            {
+                page.header-mask
+            }
+        }
+        );
+    }
+
+    {
+        % endif %
+    }
+</style>
+<header class="intro-header">
+    <div class="header-mask"></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="post-heading">
+                    <div class="tags">
+                        
+                        <a class="tag" href="/tags/#Xcode" title="Xcode">Xcode</a> 
+                        <a class="tag" href="/tags/#开发技巧" title="开发技巧">开发技巧</a> 
+                    </div>
+                    <h1>利用 Debug Memory Graph 检测内测泄漏</h1>
+                     
+                    <h2 class="subheading">利用 Xcode 内存表（Debug Memory Graph）检测内测泄漏</h2>
+                    
+                    <span class="meta">Posted by BY on July 26, 2017</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+
+            <!-- Post Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                post-container">
+
+                <h2 id="前言">前言</h2>
+
+<p>平常我们都会用 Instrument 的 Leaks / Allocations 或其他一些开源库进行内存泄露的排查，但它们都存在各种问题和不便，</p>
+
+<p>在这个 ARC 时代更常见的内存泄露是循环引用导致的 Abandoned memory，Leaks 工具查不出这类内存泄露，应用有限。</p>
+
+<p>今天介绍一种简单直接的检测内测泄漏的方法：<strong>Debug Memory Graph</strong></p>
+
+<p>就是这货：</p>
+
+<p><img src="https://ws4.sinaimg.cn/large/006tNc79gy1fhxct12udnj311x0s3grw.jpg" alt="" /></p>
+
+<h2 id="正文">正文</h2>
+
+<p>我最近的项目中，退出登录后（跳转到登录页），发现首页控制器没有被销毁，依旧能接收通知。</p>
+
+<p>退出登录代码：</p>
+
+<div class="language-objc highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">UIStoryboard</span> <span class="o">*</span><span class="n">storyboard</span> <span class="o">=</span> <span class="p">[</span><span class="n">UIStoryboard</span> <span class="nf">storyboardWithName</span><span class="p">:</span><span class="s">@"Login"</span> <span class="nf">bundle</span><span class="p">:[</span><span class="n">NSBundle</span> <span class="nf">mainBundle</span><span class="p">]];</span>
+<span class="n">AppDelegate</span> <span class="o">*</span><span class="n">appDelegate</span> <span class="o">=</span> <span class="p">(</span><span class="n">AppDelegate</span> <span class="o">*</span><span class="p">)[</span><span class="n">UIApplication</span> <span class="nf">sharedApplication</span><span class="p">].</span><span class="n">delegate</span><span class="p">;</span>
+<span class="n">appDelegate</span><span class="p">.</span><span class="n">window</span><span class="p">.</span><span class="n">rootViewController</span> <span class="o">=</span> <span class="p">[</span><span class="n">storyboard</span> <span class="nf">instantiateViewControllerWithIdentifier</span><span class="p">:</span><span class="s">@"LoginVC"</span><span class="p">];</span>
+</code></pre></div></div>
+
+<p>很明显发生了循环引用导致的内测泄漏。</p>
+
+<p>接下来就使用 <strong>Debug Memory Graph</strong> 来查看内测泄漏了。</p>
+
+<h3 id="运行程序">运行程序</h3>
+
+<p>首先启动 Xcode 运行程序。</p>
+
+<h3 id="debug-memory-graph">Debug Memory Graph</h3>
+
+<p><img src="https://ws3.sinaimg.cn/large/006tNc79gy1fhxend1a8aj315y0s3gw5.jpg" alt="" /></p>
+
+<p>点击 Debug Memory Graph 按钮后，可以看到红框内的是当前内存中存在的对象。其中，绿色的就是视图控制器。</p>
+
+<p>这样，我们随时都可以查看内测中存在的对象，换句话说，就是可以通过观察 Memory Graph 查看内测泄漏。</p>
+
+<h3 id="调试你的app">调试你的App</h3>
+
+<p>继续运行你的程序</p>
+
+<p><img src="https://ws2.sinaimg.cn/large/006tNc79gy1fhxeuh1np5j30v90kvn03.jpg" alt="" /></p>
+
+<p>然后对App进行调试、push、pop 操作，再次点击 Debug Memory Graph 按钮。那些该释放而依旧在内测中的 <code class="highlighter-rouge">控制器</code> 或 <code class="highlighter-rouge">对象</code> 就能一一找出来了。</p>
+
+<p>接下来，只要进入对应的控制器找到内测泄漏的代码就OK了，一般是Block里引用了 <code class="highlighter-rouge">self</code>，改为 <code class="highlighter-rouge">weakSelf</code> 就解决了。</p>
+
+<div class="language-objc highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define WS(weakSelf) __weak __typeof(&amp;*self)weakSelf = self;
+</span>
+<span class="n">WS</span><span class="p">(</span><span class="n">weakSelf</span><span class="p">)</span>
+<span class="n">sView</span><span class="p">.</span><span class="n">btnBlock</span> <span class="o">=</span> <span class="o">^</span><span class="p">(</span><span class="n">NSInteger</span> <span class="n">idx</span><span class="p">){</span>
+    <span class="p">[</span><span class="n">weakSelf</span><span class="p">.</span><span class="n">tableView</span> <span class="nf">reloadSections</span><span class="p">:[</span><span class="n">NSIndexSet</span> <span class="nf">indexSetWithIndex</span><span class="p">:</span><span class="n">idx</span><span class="p">]</span> <span class="nf">withRowAnimation</span><span class="p">:</span><span class="n">UITableViewRowAnimationAutomatic</span><span class="p">];</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<h2 id="结语">结语</h2>
+
+<p>就这样，利用 Debug Memory Graph，可以简单快速的检测内测泄漏。</p>
+
+<p>一般由两个对象循环引用的内测泄漏是比较好发现的，如果是由三个及其三个以上的对象形成的大的循环引用，就会比较难排查了。</p>
+
+
+                <hr style="visibility: hidden;">
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/2017/07/24/iTunes-Connect-%E6%9E%84%E5%BB%BA%E7%89%88%E6%9C%AC%E4%B8%8D%E6%98%BE%E7%A4%BA/" data-toggle="tooltip" data-placement="top"
+                            title="iTunes Connect 构建版本不显示">
+                        Previous<br>
+                        <span>iTunes Connect 构建版本不显示</span>
+                        </a>
+                    </li>
+                     
+                    <li class="next">
+                        <a href="/2017/09/11/Swift-4-%E6%96%B0%E7%89%B9%E6%80%A7/" data-toggle="tooltip" data-placement="top" title="Swift 4 新特性">
+                        Next<br>
+                        <span>Swift 4 新特性</span>
+                        </a>
+                    </li>
+                    
+                </ul>
+
+
+                <!--Gitalk评论start  -->
+                
+                <!-- 引入Gitalk评论插件  -->
+                <link rel="stylesheet" href="https://unpkg.com/gitalk/dist/gitalk.css">
+                <script src="https://unpkg.com/gitalk@latest/dist/gitalk.min.js"></script>
+                <div id="gitalk-container"></div>
+                <script type="text/javascript">
+                    var gitalk = new Gitalk({
+                        clientID: 'f2c84e7629bb1446c1a4',
+                        clientSecret: 'ca6d6139d1e1b8c43f8b2e19492ddcac8b322d0d',
+                        repo: 'qiubaiying.github.io',
+                        owner: 'qiubaiying',
+                        admin: ['qiubaiying'],
+                        distractionFreeMode: true,
+                    id: window.location.pathname,
+                    });
+                    gitalk.render('gitalk-container');
+                </script>
+                
+                <!-- Gitalk end -->
+
+                
+
+            </div>
+
+            <!-- Side Catalog Container -->
+            
+            <div class="
+                col-lg-2 col-lg-offset-0
+                visible-lg-block
+                sidebar-container
+                catalog-container">
+                <div class="side-catalog">
+                    <hr class="hidden-sm hidden-xs">
+                    <h5>
+                        <a class="catalog-toggle" href="#">CATALOG</a>
+                    </h5>
+                    <ul class="catalog-body"></ul>
+                </div>
+            </div>
+            
+
+            <!-- Sidebar Container -->
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <hr class="hidden-sm hidden-xs">
+                    <h5><a href="/tags/">FEATURED TAGS</a></h5>
+                    <div class="tags">
+                         
+                        <a href="/tags/#iOS" title="iOS" rel="31">
+                                    iOS
+                                </a>   
+                        <a href="/tags/#iOS开发基础" title="iOS开发基础" rel="1">
+                                    iOS开发基础
+                                </a>   
+                        <a href="/tags/#开发技巧" title="开发技巧" rel="7">
+                                    开发技巧
+                                </a>   
+                        <a href="/tags/#Debug" title="Debug" rel="2">
+                                    Debug
+                                </a>   
+                        <a href="/tags/#Demo" title="Demo" rel="1">
+                                    Demo
+                                </a>   
+                        <a href="/tags/#RunLoop" title="RunLoop" rel="1">
+                                    RunLoop
+                                </a>   
+                        <a href="/tags/#Obj-C" title="Obj-C" rel="3">
+                                    Obj-C
+                                </a>   
+                        <a href="/tags/#Xcode" title="Xcode" rel="9">
+                                    Xcode
+                                </a>   
+                        <a href="/tags/#定时器" title="定时器" rel="1">
+                                    定时器
+                                </a>   
+                        <a href="/tags/#Category" title="Category" rel="1">
+                                    Category
+                                </a>   
+                        <a href="/tags/#ObjC" title="ObjC" rel="1">
+                                    ObjC
+                                </a>   
+                        <a href="/tags/#ReactiveCocoa" title="ReactiveCocoa" rel="2">
+                                    ReactiveCocoa
+                                </a>   
+                        <a href="/tags/#函数式编程" title="函数式编程" rel="2">
+                                    函数式编程
+                                </a>   
+                        <a href="/tags/#开源框架" title="开源框架" rel="2">
+                                    开源框架
+                                </a>   
+                        <a href="/tags/#轮子" title="轮子" rel="1">
+                                    轮子
+                                </a>   
+                        <a href="/tags/#Runtime" title="Runtime" rel="2">
+                                    Runtime
+                                </a>   
+                        <a href="/tags/#生活" title="生活" rel="5">
+                                    生活
+                                </a>   
+                        <a href="/tags/#Blog" title="Blog" rel="2">
+                                    Blog
+                                </a>   
+                        <a href="/tags/#Mac" title="Mac" rel="8">
+                                    Mac
+                                </a>   
+                        <a href="/tags/#效率" title="效率" rel="3">
+                                    效率
+                                </a>   
+                        <a href="/tags/#博客" title="博客" rel="1">
+                                    博客
+                                </a>   
+                        <a href="/tags/#漫谈" title="漫谈" rel="1">
+                                    漫谈
+                                </a>   
+                        <a href="/tags/#终端" title="终端" rel="7">
+                                    终端
+                                </a>   
+                        <a href="/tags/#Git" title="Git" rel="5">
+                                    Git
+                                </a>   
+                        <a href="/tags/#Github" title="Github" rel="1">
+                                    Github
+                                </a>   
+                        <a href="/tags/#macOS" title="macOS" rel="1">
+                                    macOS
+                                </a>   
+                        <a href="/tags/#Swift" title="Swift" rel="9">
+                                    Swift
+                                </a>   
+                        <a href="/tags/#设计模式" title="设计模式" rel="1">
+                                    设计模式
+                                </a>   
+                        <a href="/tags/#CocoaPods" title="CocoaPods" rel="2">
+                                    CocoaPods
+                                </a>   
+                        <a href="/tags/#zsh" title="zsh" rel="2">
+                                    zsh
+                                </a>   
+                        <a href="/tags/#Objective-C" title="Objective-C" rel="1">
+                                    Objective-C
+                                </a>   
+                        <a href="/tags/#AsyncDisplayKit" title="AsyncDisplayKit" rel="1">
+                                    AsyncDisplayKit
+                                </a>   
+                        <a href="/tags/#开源库" title="开源库" rel="2">
+                                    开源库
+                                </a>   
+                        <a href="/tags/#Cocopods" title="Cocopods" rel="1">
+                                    Cocopods
+                                </a>   
+                        <a href="/tags/#ruby" title="ruby" rel="3">
+                                    ruby
+                                </a>   
+                        <a href="/tags/#shell" title="shell" rel="2">
+                                    shell
+                                </a>   
+                        <a href="/tags/#RVM" title="RVM" rel="1">
+                                    RVM
+                                </a>   
+                        <a href="/tags/#Swift语法" title="Swift语法" rel="1">
+                                    Swift语法
+                                </a>   
+                        <a href="/tags/#IBInspectable" title="IBInspectable" rel="1">
+                                    IBInspectable
+                                </a>   
+                        <a href="/tags/#Notes" title="Notes" rel="1">
+                                    Notes
+                                </a>   
+                        <a href="/tags/#健身" title="健身" rel="3">
+                                    健身
+                                </a>   
+                        <a href="/tags/#GCD" title="GCD" rel="1">
+                                    GCD
+                                </a>   
+                        <a href="/tags/#BJJ" title="BJJ" rel="1">
+                                    BJJ
+                                </a>  
+                    </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+                <hr>
+                <h5>FRIENDS</h5>
+                <ul class="list-inline">
+                    
+                    <li><a href="http://zhengwuyang.com">WY</a></li>
+                    
+                    <li><a href="http://www.jianshu.com/u/e71990ada2fd">简书·BY</a></li>
+                    
+                    <li><a href="https://apple.com">Apple</a></li>
+                    
+                    <li><a href="https://developer.apple.com/">Apple Developer</a></li>
+                    
+                </ul>
+                
+            </div>
+        </div>
+    </div>
+</article>
+
+
+ 
+<!-- async load function -->
+<script>
+                    function async(u, c) {
+                        var d = document, t = 'script',
+                            o = d.createElement(t),
+                            s = d.getElementsByTagName(t)[0];
+                        o.src = u;
+                        if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+                        s.parentNode.insertBefore(o, s);
+                    }
+
+</script>
+<!-- anchor-js, Doc:http://bryanbraun.github.io/anchorjs/ -->
+<script>
+    async("//cdnjs.cloudflare.com/ajax/libs/anchor-js/1.1.1/anchor.min.js", function () {
+        anchors.options = {
+            visible: 'always',
+            placement: 'right',
+            icon: '#'
+        };
+        anchors.add().remove('.intro-header h1').remove('.subheading').remove('.sidebar-container h5');
+    })
+
+</script>
+<style>
+    /* place left on bigger screen */
+
+    @media all and (min-width: 800px) {
+        .anchorjs-link {
+            position: absolute;
+            left: -0.75em;
+            font-size: 1.1em;
+            margin-top: -0.1em;
+        }
+    }
+</style>
